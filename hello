@@ -285,3 +285,66 @@ int main() {
     return 0;
 }
 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+// Recursive serial summation function
+int summation(int *array, int N) {
+    if (N == 0) return 0;           // Base case: Empty array
+    else if (N == 1) return *array; // Base case: Single element
+    
+    int half = N / 2;               // Divide array into two halves
+    
+    // Recursive summation of left and right halves
+    return summation(array, half) + summation(array + half, N - half);
+}
+
+// Parallel summation using OpenMP tasks
+int summation_parallel(int *A, int N) {
+    if (N == 0) return 0;
+    else if (N == 1) return *A;
+
+    int half = N / 2;
+    int x = 0, y = 0;
+
+    // Set the number of threads
+    omp_set_num_threads(4);
+
+    #pragma omp parallel
+    {
+        #pragma omp single  // Ensure only one thread creates tasks
+        {
+            #pragma omp task shared(x)
+            x = summation_parallel(A, half);  // Left half task
+
+            #pragma omp task shared(y)
+            y = summation_parallel(A + half, N - half); // Right half task
+
+            #pragma omp taskwait // Wait for both tasks to finish
+            x += y;              // Combine results
+        }
+    }
+    return x;
+}
+
+int main() {
+    int sz = 500;
+    int A[sz];
+    
+    // Initialize array with random values
+    for (int i = 0; i < sz; i++) {
+        A[i] = rand() % 10;
+    }
+
+    // Serial summation
+    printf("Serial Sum = %d\n", summation(A, sz));
+
+    // Parallel summation
+    printf("Parallel Sum = %d\n", summation_parallel(A, sz));
+
+    return 0;
+}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
