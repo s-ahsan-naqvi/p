@@ -616,3 +616,251 @@ Without **reduction**, multiple threads would **overwrite** the same memory loca
 2. Ensure large computations are **divided** evenly across **multiple threads**.
 
 Would you like additional optimizations or further explanation? 🚀
+
+### ✅ **Cleaned and Improved Code**:  
+Here is a cleaned-up and improved version of your **OpenMP task-based parallel summation program**, along with explanations and implementations of the **Fibonacci Series** and **Linked List Traversal** in parallel.
+
+---
+
+### 🧼 **Cleaned-Up Summation Program**:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+// Recursive serial summation function
+int summation(int *array, int N) {
+    if (N == 0) return 0;           // Base case: Empty array
+    else if (N == 1) return *array; // Base case: Single element
+    
+    int half = N / 2;               // Divide array into two halves
+    
+    // Recursive summation of left and right halves
+    return summation(array, half) + summation(array + half, N - half);
+}
+
+// Parallel summation using OpenMP tasks
+int summation_parallel(int *A, int N) {
+    if (N == 0) return 0;
+    else if (N == 1) return *A;
+
+    int half = N / 2;
+    int x = 0, y = 0;
+
+    // Set the number of threads
+    omp_set_num_threads(4);
+
+    #pragma omp parallel
+    {
+        #pragma omp single  // Ensure only one thread creates tasks
+        {
+            #pragma omp task shared(x)
+            x = summation_parallel(A, half);  // Left half task
+
+            #pragma omp task shared(y)
+            y = summation_parallel(A + half, N - half); // Right half task
+
+            #pragma omp taskwait // Wait for both tasks to finish
+            x += y;              // Combine results
+        }
+    }
+    return x;
+}
+
+int main() {
+    int sz = 500;
+    int A[sz];
+    
+    // Initialize array with random values
+    for (int i = 0; i < sz; i++) {
+        A[i] = rand() % 10;
+    }
+
+    // Serial summation
+    printf("Serial Sum = %d\n", summation(A, sz));
+
+    // Parallel summation
+    printf("Parallel Sum = %d\n", summation_parallel(A, sz));
+
+    return 0;
+}
+```
+
+---
+
+### 📊 **Output Example**:
+```
+Serial Sum = 2450
+Parallel Sum = 2450
+```
+
+---
+
+## 📘 **Explanation**:
+
+---
+
+### 🔹 **1. What is the `single` Construct?**
+The `#pragma omp single` construct ensures **only one thread** executes the enclosed code.
+
+**Why is this necessary?**
+1. **Avoid Duplicate Tasks**: Without `single`, every thread would create **duplicate tasks**.
+2. **Task Queue Management**: The thread that enters the `single` block creates a **task queue**, and other threads **execute** these tasks.
+   
+✅ **Optimization:**  
+If you want other threads to execute tasks **without waiting**, use:
+```c
+#pragma omp single nowait
+```
+
+---
+
+### 🔹 **2. Explanation of Key OpenMP Directives**:
+| **Directive**         | **Function**                                     |
+|-----------------------|-------------------------------------------------|
+| `#pragma omp parallel` | Starts a parallel region.                        |
+| `#pragma omp single`   | Ensures **only one** thread executes the block.  |
+| `#pragma omp task`     | Defines an **independent unit of work**.         |
+| `#pragma omp taskwait` | Waits until **all child tasks** are finished.    |
+| `omp_get_thread_num()` | Returns the **thread ID** (0, 1, 2, etc.).       |
+
+---
+
+## 🧮 **1. Fibonacci Series Calculation (Parallel)**
+
+Here is a parallel implementation of the **Fibonacci sequence**:
+```c
+#include <stdio.h>
+#include <omp.h>
+
+// Parallel Fibonacci function
+int fib(int n) {
+    if (n <= 2) return 1;
+
+    int x = 0, y = 0;
+
+    // Create tasks for recursive calls
+    #pragma omp task shared(x)
+    x = fib(n - 1);
+
+    #pragma omp task shared(y)
+    y = fib(n - 2);
+
+    #pragma omp taskwait
+    return x + y;
+}
+
+int main() {
+    int n = 10;  // Change 'n' for different Fibonacci numbers
+
+    omp_set_num_threads(4);
+
+    int result;
+    #pragma omp parallel
+    {
+        #pragma omp single
+        result = fib(n);
+    }
+
+    printf("Fibonacci(%d) = %d\n", n, result);
+    return 0;
+}
+```
+
+---
+
+### 📊 **Output**:
+```
+Fibonacci(10) = 55
+```
+
+---
+
+## 🔗 **2. Parallel Linked List Traversal**
+
+Let's traverse a **singly linked list** in parallel.
+
+---
+
+### 📄 **Linked List Structure**:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+// Node structure for linked list
+typedef struct Node {
+    int data;
+    struct Node *next;
+} Node;
+
+// Function to create a new node
+Node* create_node(int data) {
+    Node *new_node = (Node *)malloc(sizeof(Node));
+    new_node->data = data;
+    new_node->next = NULL;
+    return new_node;
+}
+
+// Parallel traversal of linked list
+void traverse_parallel(Node *head) {
+    if (head == NULL) return;
+
+    #pragma omp parallel
+    {
+        Node *current = head;
+        #pragma omp single
+        {
+            while (current != NULL) {
+                #pragma omp task firstprivate(current)
+                {
+                    printf("Thread %d: Node value = %d\n",
+                           omp_get_thread_num(), current->data);
+                }
+                current = current->next;
+            }
+        }
+    }
+}
+
+int main() {
+    // Create a linked list: 1 → 2 → 3 → 4 → 5
+    Node *head = create_node(1);
+    head->next = create_node(2);
+    head->next->next = create_node(3);
+    head->next->next->next = create_node(4);
+    head->next->next->next->next = create_node(5);
+
+    // Parallel traversal
+    traverse_parallel(head);
+
+    return 0;
+}
+```
+
+---
+
+### 📊 **Output Example**:
+```
+Thread 2: Node value = 2
+Thread 1: Node value = 1
+Thread 3: Node value = 3
+Thread 0: Node value = 4
+Thread 1: Node value = 5
+```
+
+---
+
+## 📚 **Summary**:
+
+1. **Summation (Serial and Parallel)**:
+   - Uses **OpenMP tasks** to split the summation.
+   
+2. **Fibonacci (Parallel)**:
+   - Parallelized recursive **Fibonacci** calculation using tasks.
+
+3. **Linked List Traversal (Parallel)**:
+   - Traverse a **singly linked list** using **OpenMP tasks**.
+
+---
+
