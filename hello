@@ -375,3 +375,97 @@ int main() {
     printf("Factorial of %d = %d\n", n, fac);
     return 0;
 }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <iostream>
+#include <cuda_runtime.h>
+
+// CUDA kernel to multiply a row vector with a column vector
+__global__ void vectorMultiply(int *rowVector, int *colVector, int *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i == 0) {
+        result[0] = 0; // Initialize result to 0
+        for (int j = 0; j < n; ++j) {
+            result[0] += rowVector[j] * colVector[j]; // Dot product calculation
+        }
+    }
+}
+
+int main() {
+    int numRows, numCols;
+
+    // Get the size of the row and column vectors from the user
+    std::cout << "Enter the number of elements in the row vector: ";
+    std::cin >> numRows;
+
+    std::cout << "Enter the number of elements in the column vector: ";
+    std::cin >> numCols;
+
+    // Input validation
+    if (numRows <= 0 || numCols <= 0) {
+        std::cerr << "Error: Vector dimensions must be greater than 0.\n";
+        return 1;
+    }
+
+    if (numRows != numCols) {
+        std::cerr << "Error: Dimensions must be equal for dot product.\n";
+        return 1;
+    }
+
+    // Host vectors
+    int *h_rowVector = new int[numRows];
+    int *h_colVector = new int[numCols];
+    int *h_result = new int[1];
+
+    // Get values for row and column vectors
+    std::cout << "Enter values for the row vector:\n";
+    for (int i = 0; i < numRows; ++i) {
+        std::cout << "Value " << i + 1 << ": ";
+        std::cin >> h_rowVector[i];
+    }
+
+    std::cout << "Enter values for the column vector:\n";
+    for (int i = 0; i < numCols; ++i) {
+        std::cout << "Value " << i + 1 << ": ";
+        std::cin >> h_colVector[i];
+    }
+
+    // Device vectors
+    int *d_rowVector, *d_colVector, *d_result;
+
+    // Allocate memory on the device
+    cudaMalloc((void**)&d_rowVector, numRows * sizeof(int));
+    cudaMalloc((void**)&d_colVector, numCols * sizeof(int));
+    cudaMalloc((void**)&d_result, sizeof(int));
+
+    // Copy vectors from host to device
+    cudaMemcpy(d_rowVector, h_rowVector, numRows * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_colVector, h_colVector, numCols * sizeof(int), cudaMemcpyHostToDevice);
+
+    // Define block and grid sizes (1 block because the computation is small)
+    dim3 blockSize(256);
+    dim3 gridSize(1);
+
+    // Launch the kernel
+    vectorMultiply<<<gridSize, blockSize>>>(d_rowVector, d_colVector, d_result, numRows);
+
+    // Copy the result from device to host
+    cudaMemcpy(h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
+
+    // Output the result
+    std::cout << "Resultant Scalar (Dot Product): " << h_result[0] << "\n";
+
+    // Free memory on the device
+    cudaFree(d_rowVector);
+    cudaFree(d_colVector);
+    cudaFree(d_result);
+
+    // Free memory on the host
+    delete[] h_rowVector;
+    delete[] h_colVector;
+    delete[] h_result;
+
+    return 0;
+}
+
