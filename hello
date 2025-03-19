@@ -469,3 +469,53 @@ int main() {
     return 0;
 }
 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+// Number of threads and a shared barrier
+#define NUM_THREADS 4
+pthread_barrier_t barrier;
+
+// Worker function for each thread
+void *worker(void *arg) {
+    int id = *(int *)arg;
+    printf("Thread %d: Performing work before the barrier...\n", id);
+    sleep(1);  // Simulate work
+
+    // Wait at the barrier
+    pthread_barrier_wait(&barrier);
+    printf("Thread %d: Passed the barrier. Continuing work...\n", id);
+
+    free(arg);  // Free allocated memory
+    return NULL;
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+
+    // Initialize the barrier for NUM_THREADS
+    pthread_barrier_init(&barrier, NULL, NUM_THREADS);
+
+    // Create worker threads
+    for (int i = 0; i < NUM_THREADS; i++) {
+        int *id = malloc(sizeof(int));
+        *id = i;
+        pthread_create(&threads[i], NULL, worker, id);
+    }
+
+    // Wait for all threads to complete
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // Destroy the barrier
+    pthread_barrier_destroy(&barrier);
+
+    printf("All threads have completed. Program exiting.\n");
+    return 0;
+}
+
