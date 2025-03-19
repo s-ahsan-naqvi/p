@@ -176,3 +176,112 @@ int main() {
 
     return 0;
 }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include<stdlib.h>
+#include<stdio.h>
+#include<omp.h>
+int main(int argc, char const *argv[])
+{
+int A[10] = {1,2,3,4,5,6,7,8,9,10};
+int B[10] = {1,2,3,4,5,6,7,8,9,10};
+int C[10];
+# pragma omp parallel
+{
+int thread_id = omp_get_thread_num();
+int num_threads = omp_get_num_threads();
+print("Thread %d of %d is executing \n", thread_id, num_threads);
+for (int i=0; i<10; i++)
+{
+C[i]= A[i]+B[i];
+}
+printf("The new values are:");
+for (int j=0;j<10;j++)
+{
+printf(" %d", C[j]);
+}
+print("\n");
+}
+return 0;
+}
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define SIZE 500000
+
+int main() {
+    int A[SIZE], B[SIZE], C[SIZE];
+
+    // Initialize arrays with random values
+    for (int i = 0; i < SIZE; i++) {
+        A[i] = rand() % 100;
+        B[i] = rand() % 10;
+    }
+
+    /*** Sequential Code ***/
+    clock_t begin = clock();
+    for (int i = 0; i < SIZE; i++) {
+        C[i] = A[i] * B[i];
+    }
+    clock_t end = clock();
+    double time_sequential = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("Sequential Time: %f seconds\n\n", time_sequential);
+
+    // Set the number of OpenMP threads
+    omp_set_num_threads(8);
+
+    /*** OpenMP Parallel Region (Without Data Distribution) ***/
+    double start_time_parallel = omp_get_wtime();
+    #pragma omp parallel
+    {
+        for (int i = 0; i < SIZE; i++) {
+            C[i] = A[i] * B[i];
+        }
+    }
+    double time_parallel = omp_get_wtime() - start_time_parallel;
+    printf("Parallel (Without Data Distribution) Time: %f seconds\n\n", time_parallel);
+
+    /*** OpenMP Parallel Region (With Manual Data Distribution) ***/
+    double start_time_manual = omp_get_wtime();
+    #pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        int thread_count = omp_get_num_threads();
+
+        // Calculate start and end indices for each thread
+        int start_index = thread_id * SIZE / thread_count;
+        int end_index = (thread_id + 1) * SIZE / thread_count;
+
+        // Ensure the last thread covers the remaining elements
+        if (thread_id == thread_count - 1) {
+            end_index = SIZE;
+        }
+
+        for (int i = start_index; i < end_index; i++) {
+            C[i] = A[i] * B[i];
+        }
+    }
+    double time_manual = omp_get_wtime() - start_time_manual;
+    printf("Parallel (With Manual Data Distribution) Time: %f seconds\n\n", time_manual);
+
+    /*** OpenMP Parallel Region (Using Loop Construct) ***/
+    double start_time_loop = omp_get_wtime();
+    #pragma omp parallel
+    {
+        #pragma omp for
+        for (int i = 0; i < SIZE; i++) {
+            C[i] = A[i] * B[i];
+        }
+    }
+    double time_loop = omp_get_wtime() - start_time_loop;
+    printf("Parallel (Using Loop Construct) Time: %f seconds\n", time_loop);
+
+    return 0;
+}
+
