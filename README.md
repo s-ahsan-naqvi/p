@@ -864,3 +864,165 @@ Thread 1: Node value = 5
 
 ---
 
+### 🔗 **Pthread Barriers**:  
+
+A **barrier** is a synchronization mechanism used in **multithreading** to make sure that **all threads** reach a specific point in execution **before any of them proceeds**.
+
+---
+
+### ✅ **1. What is a Barrier?**
+- It **blocks** threads until a defined number of threads have reached the barrier point.
+- Useful when threads perform **independent work** and must **synchronize** before moving to the next stage.
+
+---
+
+### 📚 **2. Pthread Barrier Functions**
+
+| **Function**                     | **Purpose**                                        |
+|-----------------------------------|---------------------------------------------------|
+| `pthread_barrier_init()`          | Initializes the barrier.                          |
+| `pthread_barrier_wait()`          | Blocks threads until the barrier count is reached.|
+| `pthread_barrier_destroy()`       | Destroys the barrier and frees resources.         |
+
+---
+
+### 📄 **3. Syntax and Usage**
+
+1. **Initialize a Barrier**  
+```c
+int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count);
+```
+- **`barrier`**: A pointer to a `pthread_barrier_t` object.
+- **`attr`**: Pass `NULL` for default attributes.
+- **`count`**: Number of threads to wait for at the barrier.
+
+2. **Wait at a Barrier**  
+```c
+int pthread_barrier_wait(pthread_barrier_t *barrier);
+```
+- **Blocks** the calling thread until **count** threads reach the barrier.
+
+3. **Destroy a Barrier**  
+```c
+int pthread_barrier_destroy(pthread_barrier_t *barrier);
+```
+- **Releases** the resources used by the barrier.
+
+---
+
+### 🧑‍💻 **4. Example Program (Pthread Barrier Usage)**
+
+This example:
+1. Each thread prints a message.
+2. All threads **wait** at a barrier before continuing.
+3. The main thread **joins** all worker threads.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+// Number of threads and a shared barrier
+#define NUM_THREADS 4
+pthread_barrier_t barrier;
+
+// Worker function for each thread
+void *worker(void *arg) {
+    int id = *(int *)arg;
+    printf("Thread %d: Performing work before the barrier...\n", id);
+    sleep(1);  // Simulate work
+
+    // Wait at the barrier
+    pthread_barrier_wait(&barrier);
+    printf("Thread %d: Passed the barrier. Continuing work...\n", id);
+
+    free(arg);  // Free allocated memory
+    return NULL;
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+
+    // Initialize the barrier for NUM_THREADS
+    pthread_barrier_init(&barrier, NULL, NUM_THREADS);
+
+    // Create worker threads
+    for (int i = 0; i < NUM_THREADS; i++) {
+        int *id = malloc(sizeof(int));
+        *id = i;
+        pthread_create(&threads[i], NULL, worker, id);
+    }
+
+    // Wait for all threads to complete
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // Destroy the barrier
+    pthread_barrier_destroy(&barrier);
+
+    printf("All threads have completed. Program exiting.\n");
+    return 0;
+}
+```
+
+---
+
+### 📊 **5. Output**
+The output shows threads working independently and waiting at the barrier before continuing:
+
+```
+Thread 0: Performing work before the barrier...
+Thread 1: Performing work before the barrier...
+Thread 2: Performing work before the barrier...
+Thread 3: Performing work before the barrier...
+
+Thread 3: Passed the barrier. Continuing work...
+Thread 2: Passed the barrier. Continuing work...
+Thread 0: Passed the barrier. Continuing work...
+Thread 1: Passed the barrier. Continuing work...
+
+All threads have completed. Program exiting.
+```
+
+---
+
+### 🔎 **6. Key Concepts**
+
+1. **Thread Synchronization**: All threads must wait at `pthread_barrier_wait()` before proceeding.
+   
+2. **Order of Execution**: The order after the barrier is **not guaranteed**—depends on the **scheduling**.
+
+3. **Return Value**:
+   - **0**: For most threads after the barrier.
+   - **PTHREAD_BARRIER_SERIAL_THREAD**: For **one** randomly chosen thread that "breaks" the barrier.
+
+---
+
+### 📌 **7. Example with Barrier Return Check**
+
+```c
+int status = pthread_barrier_wait(&barrier);
+if (status == PTHREAD_BARRIER_SERIAL_THREAD) {
+    printf("Thread %d: I am the first to break the barrier!\n", id);
+}
+```
+
+---
+
+### 🏗️ **8. Use Cases of Barriers**
+- **Parallel Algorithms**: Ensure **synchronization** between computation phases.
+- **Data Sharing**: Safely share data between threads at defined checkpoints.
+- **Simulation Models**: Simulate real-time systems where all processes synchronize.
+
+---
+
+### 📚 **9. Common Errors**
+1. **Not Initializing the Barrier**: Always call `pthread_barrier_init()` before `pthread_barrier_wait()`.
+2. **Missing Destroy Call**: Use `pthread_barrier_destroy()` to avoid **memory leaks**.
+3. **Wrong Thread Count**: Ensure `count` matches the **number of threads** exactly.
+
+---
+
+
