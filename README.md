@@ -475,3 +475,144 @@ printf("Time: %f seconds\n", omp_get_wtime());
 4. Minimize thread communication.
 
 ---
+
+Here's your **reformatted and cleaned-up** OpenMP factorial program with **detailed explanations**:
+
+---
+
+### ✅ **Reformatted Code:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int i, n = 8;         // 'n' is the number to compute factorial
+    int fac = 1;          // Initialize factorial result
+
+    // Set the number of threads to 4
+    omp_set_num_threads(4);
+
+    // Parallelize the loop with OpenMP
+    #pragma omp parallel for ordered shared(n) private(i) reduction(*:fac)
+    for (i = 1; i <= n; i++) {
+        fac *= i;  // Multiply current value of i
+
+        // Ordered ensures the output order is maintained
+        #pragma omp ordered
+        printf("Thread %d - iteration %d - fac(%d) = %d\n",
+               omp_get_thread_num(), i, n, fac);
+    }
+
+    // Print the final factorial value
+    printf("Factorial of %d = %d\n", n, fac);
+    return 0;
+}
+```
+
+---
+
+### 📊 **Program Output Example:**
+```
+Thread 0 - iteration 1 - fac(8) = 1
+Thread 1 - iteration 2 - fac(8) = 2
+Thread 2 - iteration 3 - fac(8) = 6
+Thread 3 - iteration 4 - fac(8) = 24
+Thread 0 - iteration 5 - fac(8) = 120
+Thread 1 - iteration 6 - fac(8) = 720
+Thread 2 - iteration 7 - fac(8) = 5040
+Thread 3 - iteration 8 - fac(8) = 40320
+Factorial of 8 = 40320
+```
+
+---
+
+## 📘 **Detailed Explanation:**
+
+---
+
+### 🔹 **1. Variables and Initialization**
+```c
+int i, n = 8;   // 'n' is the number for factorial calculation
+int fac = 1;    // Initial value of factorial
+```
+- `n = 8` → We are computing **8! (8 factorial)**.
+- `fac = 1` → This variable stores the result of the factorial.
+
+---
+
+### 🔹 **2. Setting the Number of Threads**
+```c
+omp_set_num_threads(4);
+```
+- This tells OpenMP to use **4 threads** for parallel execution.
+- You can adjust this number based on the hardware (e.g., `omp_set_num_threads(8)`).
+
+---
+
+### 🔹 **3. OpenMP Parallel Loop**
+```c
+#pragma omp parallel for ordered shared(n) private(i) reduction(*:fac)
+```
+Let's break down each **clause**:
+
+| **Clause**       | **Explanation**                                      |
+|------------------|-----------------------------------------------------|
+| **`parallel`**   | Starts a parallel region where threads execute code. |
+| **`for`**        | Divides loop iterations among threads.               |
+| **`ordered`**    | Ensures that output happens in a sequential manner.  |
+| **`shared(n)`**  | The variable `n` is **shared** among all threads.    |
+| **`private(i)`** | Each thread gets its **own copy** of `i`.            |
+| **`reduction(*:fac)`** | Each thread calculates part of `fac`, and multiplies results together at the end. |
+
+---
+
+### 🔹 **4. Factorial Calculation**
+```c
+fac *= i;
+```
+Each thread calculates part of the factorial by multiplying the current iteration value (`i`) with the existing `fac`.
+
+---
+
+### 🔹 **5. Ensuring Ordered Output**
+```c
+#pragma omp ordered
+printf("Thread %d - iteration %d - fac(%d) = %d\n",
+       omp_get_thread_num(), i, n, fac);
+```
+- **`omp_get_thread_num()`**: Returns the **thread ID** (0, 1, 2, etc.).
+- **`ordered`**: Ensures output is displayed **in order of loop iterations**, even though calculations are parallel.
+
+Without `ordered`, output would be jumbled.
+
+---
+
+### 🔹 **6. Final Output**
+```c
+printf("Factorial of %d = %d\n", n, fac);
+```
+This prints the **final factorial** value after all threads finish computation.
+
+---
+
+## 🧮 **7. How the Reduction Works**
+When you use `reduction(*:fac)`:
+1. Each thread gets a **local copy** of `fac`.
+2. Threads **multiply** their values independently.
+3. At the **end of the loop**, all results are **combined** using `*`.
+
+Without **reduction**, multiple threads would **overwrite** the same memory location, causing **incorrect results** due to a **race condition**.
+
+---
+
+## 🔥 **8. Why Use `ordered` Instead of `critical`?**
+- **`ordered`** is used when you want to maintain the **execution order** of loop iterations.
+- **`critical`** ensures mutual exclusion but **slows down performance** due to thread locking.
+
+---
+
+## 📚 **9. Optimization Tip**
+1. Avoid using `ordered` unless necessary—it **slows down** parallel execution.
+2. Ensure large computations are **divided** evenly across **multiple threads**.
+
+Would you like additional optimizations or further explanation? 🚀
