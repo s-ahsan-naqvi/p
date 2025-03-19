@@ -347,4 +347,31 @@ int main() {
 
     return 0;
 }
+
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int i, n = 8;         // 'n' is the number to compute factorial
+    int fac = 1;          // Initialize factorial result
+
+    // Set the number of threads to 4
+    omp_set_num_threads(4);
+
+    // Parallelize the loop with OpenMP
+    #pragma omp parallel for ordered shared(n) private(i) reduction(*:fac)
+    for (i = 1; i <= n; i++) {
+        fac *= i;  // Multiply current value of i
+
+        // Ordered ensures the output order is maintained
+        #pragma omp ordered
+        printf("Thread %d - iteration %d - fac(%d) = %d\n",
+               omp_get_thread_num(), i, n, fac);
+    }
+
+    // Print the final factorial value
+    printf("Factorial of %d = %d\n", n, fac);
+    return 0;
+}
