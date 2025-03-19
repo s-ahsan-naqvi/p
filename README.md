@@ -156,3 +156,322 @@ int main() {
 gcc program.c -o program -lpthread
 ./program
 ```
+
+
+
+## 🔍 **1. What is OpenMP?**
+OpenMP (**Open Multi-Processing**) is an API for writing **parallel programs** in C, C++, and Fortran. It supports **shared-memory parallelism** using compiler directives, runtime routines, and environment variables.
+
+---
+
+## 📌 **2. Setting Up OpenMP**
+1. **Compiling an OpenMP Program**
+```bash
+gcc -fopenmp program.c -o output
+```
+
+2. **Controlling the Number of Threads**
+```bash
+export OMP_NUM_THREADS=4  # Use 4 threads
+./output
+```
+
+---
+
+## 📘 **3. Basic OpenMP Program Structure**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        int id = omp_get_thread_num();
+        printf("Hello from thread %d\n", id);
+    }
+    return 0;
+}
+```
+
+✔️ This will output "Hello from thread X" for each thread.
+
+---
+
+## 📚 **4. OpenMP Directives and Examples**
+
+---
+
+### 📌 **4.1 `#pragma omp parallel`**
+Used to define a **parallel region** where multiple threads execute concurrently.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        printf("Thread %d is working\n", omp_get_thread_num());
+    }
+    return 0;
+}
+```
+**Output (order may vary):**
+```
+Thread 0 is working
+Thread 1 is working
+Thread 2 is working
+Thread 3 is working
+```
+
+---
+
+### 📌 **4.2 `#pragma omp for`**
+Divides **loop iterations** among multiple threads.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int sum = 0;
+    #pragma omp parallel for
+    for (int i = 0; i < 10; i++) {
+        printf("Thread %d: i = %d\n", omp_get_thread_num(), i);
+    }
+    return 0;
+}
+```
+
+✅ **Note:** Ensure the loop variable is **private** by default.
+
+---
+
+### 📌 **4.3 `#pragma omp sections`**
+Executes **different code blocks** in parallel.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel sections
+    {
+        #pragma omp section
+        printf("Task 1 by thread %d\n", omp_get_thread_num());
+
+        #pragma omp section
+        printf("Task 2 by thread %d\n", omp_get_thread_num());
+    }
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.4 `#pragma omp single`**
+Ensures **only one** thread executes a block.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        #pragma omp single
+        printf("Only one thread prints this.\n");
+
+        printf("All threads execute this part.\n");
+    }
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.5 `#pragma omp master`**
+Only the **master** thread (thread 0) executes the block.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        #pragma omp master
+        printf("This is the master thread: %d\n", omp_get_thread_num());
+    }
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.6 `#pragma omp critical`**
+Allows **only one thread** at a time to execute a block (prevents race conditions).
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int sum = 0;
+
+    #pragma omp parallel
+    {
+        #pragma omp critical
+        sum += 1;
+    }
+    printf("Sum: %d\n", sum);
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.7 `#pragma omp atomic`**
+Performs a **single atomic operation** (faster than `#pragma omp critical`).
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int sum = 0;
+    #pragma omp parallel
+    {
+        #pragma omp atomic
+        sum++;
+    }
+    printf("Sum: %d\n", sum);
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.8 `#pragma omp barrier`**
+Forces all threads to **wait** at a point before continuing.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        printf("Before barrier: %d\n", omp_get_thread_num());
+
+        #pragma omp barrier
+
+        printf("After barrier: %d\n", omp_get_thread_num());
+    }
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.9 `#pragma omp task`**
+Creates **asynchronous tasks**.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {
+            for (int i = 0; i < 5; i++) {
+                #pragma omp task
+                printf("Task %d executed by thread %d\n", i, omp_get_thread_num());
+            }
+        }
+    }
+    return 0;
+}
+```
+
+---
+
+### 📌 **4.10 `#pragma omp reduction`**
+Combines values using **reduction operators** across threads.
+
+**Example:**
+```c
+#include <stdio.h>
+#include <omp.h>
+
+int main() {
+    int sum = 0;
+    #pragma omp parallel for reduction(+:sum)
+    for (int i = 1; i <= 10; i++) {
+        sum += i;
+    }
+    printf("Sum: %d\n", sum);  // Outputs 55
+    return 0;
+}
+```
+
+✅ **Common Reduction Operators:**
+- `+:` Sum
+- `*: ` Product
+- `&:` Bitwise AND
+- `|:` Bitwise OR
+- `^:` Bitwise XOR
+
+---
+
+## 📊 **5. OpenMP Environment Variables**
+| Variable               | Description                       |
+|------------------------|-----------------------------------|
+| `OMP_NUM_THREADS`      | Number of threads to use          |
+| `OMP_DYNAMIC`          | Enable/disable dynamic threads    |
+| `OMP_SCHEDULE`         | Control scheduling policy         |
+| `OMP_STACKSIZE`        | Set thread stack size             |
+
+Example:
+```bash
+export OMP_NUM_THREADS=8
+```
+
+---
+
+## 📚 **6. Common OpenMP Functions**
+| Function                   | Description                           |
+|----------------------------|---------------------------------------|
+| `omp_get_thread_num()`     | Returns the thread's ID (0 to N-1)    |
+| `omp_get_num_threads()`    | Returns the number of threads         |
+| `omp_set_num_threads(n)`   | Sets the number of threads            |
+| `omp_get_wtime()`          | Returns the wall-clock time           |
+| `omp_in_parallel()`        | Returns `1` if in parallel, `0` otherwise |
+
+Example:
+```c
+printf("Time: %f seconds\n", omp_get_wtime());
+```
+
+---
+
+## 📈 **7. Performance Tips**
+1. Use **`reduction`** for thread-safe accumulations.
+2. Avoid overusing **`critical`** and **`atomic`** (they slow down performance).
+3. Tune **scheduling**:
+   - `static` – Equal block distribution.
+   - `dynamic` – Assigns chunks as threads finish.
+4. Minimize thread communication.
+
+---
